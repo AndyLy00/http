@@ -4,7 +4,8 @@ const process = require('process');
 // Function to make HTTP request
 function makeRequest(host, port, path, callback) {
     const client = net.createConnection({ host, port }, () => {
-        client.write(`GET ${path} HTTP/1.1\r\nHost: ${host}\r\n\r\n`);
+        const request = `GET ${path} HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\n\r\n`;
+        client.write(request);
     });
 
     let responseData = '';
@@ -15,6 +16,7 @@ function makeRequest(host, port, path, callback) {
 
     client.on('end', () => {
         callback(responseData);
+        client.end();
     });
 
     client.on('error', (err) => {
@@ -24,14 +26,14 @@ function makeRequest(host, port, path, callback) {
 
 // Function to parse and print response
 function parseResponse(response) {
-    // Extracting headers and body
+    // Splitting response into headers and body
     const [headers, body] = response.split('\r\n\r\n');
-    const statusCode = headers.split('\r\n')[0].split(' ')[1];
+    const headerLines = headers.split('\r\n');
+    const statusCode = headerLines[0].split(' ')[1];
 
     if (statusCode === '200') {
-        // Removing HTML tags for simplicity
-        const cleanBody = body.replace(/<[^>]*>/g, '');
-        console.log(cleanBody);
+        // Printing the body directly
+        console.log(body);
     } else {
         console.error('Error:', statusCode);
     }
@@ -40,10 +42,10 @@ function parseResponse(response) {
 // Parse command-line arguments
 const args = process.argv.slice(2);
 const command = args[0];
-const param = args[1];
+const param = args.slice(1).join(' ');
 
 // Execute corresponding action
-if (command === '-h') {
+if (command === '-h' || !command) {
     console.log('Usage:');
     console.log('go2web -u <URL>');
     console.log('go2web -s <search-term>');
@@ -57,3 +59,4 @@ if (command === '-h') {
 } else {
     console.error('Invalid command. Use -h for help.');
 }
+
